@@ -1,0 +1,58 @@
+empty command
+Use '$ue help' to see list of commands.
+<break>
+bad command
+Unrecognised command. Use '$ue help' to see list of commands.
+<break>
+poll name missing
+Poll name not recognised.
+<break>
+poll permission
+You must have created that poll or have the "manage messages" permission to do that.
+<break>
+usage roll
+Usage: '$ue roll [space separated dice]'
+Example: $ue roll d20 2d6 d4 9d73
+<break>
+usage poll
+Usage: '$ue poll [make/add/remove/change/call/delete] [poll name] <...>'
+Poll names are purely for identifying polls. Users won't see poll names unless they see a command using it. Remember the poll names you enter if your commands might be buried.
+Please delete polls once they're over.
+<break>
+usage poll make
+Usage: '$ue poll make [poll name] [open/exclusive/binary] <votes> [channel] [question]'
+Example: $ue poll make game open board-games What games do you like?
+Example: $ue poll make magic exclusive 3 trading-card-games What are your top three favourite trading card games?
+The <votes> field is only used in exclusive polls. Anyone can vote for any number of options in open polls, and only one in binary polls.
+<break>
+usage poll add
+Usage: '$ue poll add [poll name] [reaction code] [option]'
+Example: $ue poll add game :house_abandoned: Betrayal at the House on the Hill
+Options can't be added to binary polls, since the only options are yes and no.
+<break>
+usage poll remove
+Usage: '$ue poll remove [poll name] [reaction code]'
+Example: $ue poll remove game :gem:
+<break>
+usage poll change
+Usage: '$ue poll change [poll name] [new question]'
+Example: $ue poll change game Which games do you want to play this Friday?
+<break>
+usage poll call
+Usage: '$ue poll call [poll name]'
+Using this command on a called poll will make it open for voting again.
+<break>
+usage poll delete
+Usage: '$ue poll delete [poll name]'
+Note that this frees up the poll name for use again, but is permanent and irreversible.
+<break>
+poll purge
+Purging all polls is a permanent and irreversible action. Upon doing so, any polls created prior to this point will become unmodifiable and unreadable by me. It should only be used outside debugging in important administrative matters.
+If you would like to proceed, please type '$ue gblogbddybtstsasgts'.
+<break>
+help
+To use me, start your message with '$ue'. You can type a command by itself to see its exact syntax.
+help: See this help message.
+roll: Roll any number and type of standard dice.
+dadjoke: Hear a terrible joke.
+poll: Create and manage polls.
