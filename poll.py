@@ -32,6 +32,24 @@ class Poll:
         except:
             return "There was some error in editing the message. Sorry!"
 
+    async def change_option(self, reaction_code, option):
+        if reaction_code not in self.options:
+            return "Option not found in poll."
+
+        try:
+            self.options[reaction_code] = option
+            old_content = self.message.content.split("\n")
+            i = 1
+            for line in old_content[2:]:
+                i += 1
+                if line.startswith(reaction_code):
+                    old_content[i] = reaction_code + ": " + option
+                    new_content = "\n".join(old_content)
+                    await self.message.edit(content=new_content)
+                    return "Option successfully change."
+        except:
+            return "There was some error in editing the message. Sorry!"
+
     async def add_option(self, reaction_code, option):
         try:
             try:
@@ -66,6 +84,7 @@ class Poll:
                 if old_content[i+2].startswith(reaction_code):
                     new_content = "\n".join(old_content[:i+2] + old_content[i+3:])
                     await self.message.edit(content=new_content)
+                    del self.options[reaction_code]
                     return "Option successfully removed."
             return "Option not found in message."
         except discord.errors.HTTPException:
@@ -76,9 +95,12 @@ class Poll:
             return "There was some error in editing the message. Sorry!"
 
     async def call(self):
+        if len(self.options) == 0:
+            return "Cannot call a poll with no options."
+
         self.disabled = not self.disabled
         if self.disabled:
-            reacts = [react for react in self.message.reactions]
+            reacts = [react for react in self.message.reactions if react.emoji in self.options]
             reacts.sort(key=lambda x: x.count, reverse=True)
             highest = reacts[0].count
             winners = [react for react in reacts if react.count == highest]

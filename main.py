@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from asyncio import sleep
 from poll import *
 
-load_dotenv()
+load_dotenv() # testing only - does nothing when actually deployed
 
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
@@ -73,7 +73,7 @@ async def parse_command(command, channel, user):
         if len(command) < 3:
             return messages["usage poll"]
         return await manage_polls(command[2:], channel, user)
-    elif action == "gblogbddybtstsasgts" and channel.permissions_for(user).manage_messages:
+    elif action == "gblogbddyptstsasgts" and channel.permissions_for(user).manage_messages:
         polls = {}
         return "Polls successfully purged."
     elif action == "help":
@@ -83,9 +83,20 @@ async def parse_command(command, channel, user):
 
 async def roll_dice(dice):
     rolls = []
+    hide_ind = False
+    total = 0
+
+    if dice[0] == "sum":
+        if len(dice) < 2:
+            return messages["usage roll sum"]
+        dice = dice[1:]
+        hide_ind = True
 
     for die in dice:
         ind = die.find("d")
+
+        if ind == -1:
+            ind = die.find("D")
 
         if ind == -1 or len(die) < 2 or ind == len(die)-1:
             return "Invalid dice entered."
@@ -108,14 +119,22 @@ async def roll_dice(dice):
             return "Invalid type of dice entered."
 
         for _ in range(quantity):
-            rolls.append(random.randrange(1, type+1, 1))
+            roll = random.randint(1, type)
+            total += roll
+            rolls.append(roll)
 
     output = ""
-    for roll in rolls:
-        output += str(roll) + " "
+    if not hide_ind:
+        for roll in rolls:
+            output += str(roll) + " "
 
-    if " " in output[:-1]:
-        output += "\nTotal: " + str(sum(rolls))
+    if " " in output[:-1] or hide_ind:
+        if not hide_ind:
+            output += "\n"
+        output += "Total: " + str(total)
+
+    if len(output) > 1990:
+        output = "Too many rolls to display individual results. Total: " + str(total)
 
     return output
 
@@ -130,12 +149,28 @@ async def manage_polls(commands, channel, user):
             return await make_poll(commands[1:], channel, user)
     elif commands[0] == "purge" and channel.permissions_for(user).manage_messages:
         return messages["poll purge"]
+    elif commands[0] == "list":
+        return await list_polls()
 
     if len(commands) > 1:
         if commands[1] not in polls:
             return messages["poll name missing"]
         elif user != polls[commands[1]].owner and not channel.permissions_for(user).manage_messages:
             return messages["poll permission"]
+
+    if commands[0] == "call":
+        if len(commands) < 2:
+            return messages["usage poll call"]
+        else:
+            return await call_poll(commands[1])
+    elif commands[0] == "delete":
+        if len(commands) < 2:
+            return messages["usage poll delete"]
+        else:
+            return await delete_poll(commands[1])
+
+    if polls[commands[1]].disabled:
+        return "Cannot modify a called poll."
 
     if commands[0] == "add":
         if len(commands) < 4:
@@ -147,21 +182,16 @@ async def manage_polls(commands, channel, user):
             return messages["usage poll remove"]
         else:
             return await remove_poll_option(commands[1:])
-    elif commands[0] == "change":
+    elif commands[0] == "changeq":
         if len(commands) < 3:
-            return messages["usage poll change"]
+            return messages["usage poll changeq"]
         else:
             return await change_poll_question(commands[1:])
-    elif commands[0] == "call":
-        if len(commands) < 2:
-            return messages["usage poll call"]
+    elif commands[0] == "changeop":
+        if len(commands) < 4:
+            return messages["usage poll changeop"]
         else:
-            return await call_poll(commands[1])
-    elif commands[0] == "delete":
-        if len(commands) < 2:
-            return messages["usage poll delete"]
-        else:
-            return await delete_poll(commands[1])
+            return await change_poll_option(commands[1:])
 
     return messages["usage poll"]
 
@@ -184,7 +214,7 @@ async def make_poll(commands, origin_channel, user):
     for channel in origin_channel.guild.text_channels:
         if (channel.name == channel_name):
             if not channel.permissions_for(user).send_messages:
-                return "You don't have the permission to send messages in the target channel."""
+                return "You don't have the permission to send messages in the target channel."
             temp_message = await channel.send("Poll:\n" + question)
             message_id = temp_message.id
             await sleep(1) # trust me this is important
@@ -220,12 +250,32 @@ async def change_poll_question(commands):
     new_question = " ".join(commands)
     return await polls[name].set_question(new_question)
 
+async def change_poll_option(commands):
+    name = commands.pop(0)
+    reaction_code = commands.pop(0)
+    new_option = " ".join(commands)
+    return await polls[name].change_option(reaction_code, new_option)
+
 async def call_poll(name):
     return await polls[name].call()
 
 async def delete_poll(name):
     del polls[name]
     return "Poll successfully deleted."
+
+async def list_polls():
+    if len(polls) == 0:
+        return "No polls currently exist."
+
+    output = ""
+    for poll in polls:
+        output += "\n" + poll + ": " + polls[poll].question + " @ " + polls[poll].message.channel.name + " is "
+        if polls[poll].disabled:
+            output += "called"
+        else:
+            output += "active"
+
+    return output[1:]
 
 async def handle_poll_vote(reaction, user, name):
     if polls[name].type != "open":

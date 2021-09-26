@@ -13,9 +13,14 @@ You must have created that poll or have the "manage messages" permission to do t
 usage roll
 Usage: '$ue roll [space separated dice]'
 Example: $ue roll d20 2d6 d4 9d73
+For high quantity rolls, use '$ue roll sum' to display sum of individual rolls for each entry.
+<break>
+usage roll sum
+Usage: '$ue roll sum [space separated dice]'
+Example: $ue roll sum 10000d3
 <break>
 usage poll
-Usage: '$ue poll [make/add/remove/change/call/delete] [poll name] <...>'
+Usage: '$ue poll [make/add/remove/changeq/changeop/call/delete] [poll name] <...>'
 Poll names are purely for identifying polls. Users won't see poll names unless they see a command using it. Remember the poll names you enter if your commands might be buried.
 Please delete polls once they're over.
 <break>
@@ -34,9 +39,13 @@ usage poll remove
 Usage: '$ue poll remove [poll name] [reaction code]'
 Example: $ue poll remove game :gem:
 <break>
-usage poll change
-Usage: '$ue poll change [poll name] [new question]'
-Example: $ue poll change game Which games do you want to play this Friday?
+usage poll changeq
+Usage: '$ue poll changeq [poll name] [new question]'
+Example: $ue poll changeq game Which games do you want to play this Friday?
+<break>
+usage poll changeop
+Usage: '$ue poll changeop [poll name] [reaction code] [new option]'
+Example: $ue poll changeop game :house_abandoned: Betrayal
 <break>
 usage poll call
 Usage: '$ue poll call [poll name]'
@@ -48,7 +57,7 @@ Note that this frees up the poll name for use again, but is permanent and irreve
 <break>
 poll purge
 Purging all polls is a permanent and irreversible action. Upon doing so, any polls created prior to this point will become unmodifiable and unreadable by me. It should only be used outside debugging in important administrative matters.
-If you would like to proceed, please type '$ue gblogbddybtstsasgts'.
+If you would like to proceed, please type '$ue gblogbddyptstsasgts'.
 <break>
 help
 To use me, start your message with '$ue'. You can type a command by itself to see its exact syntax.
