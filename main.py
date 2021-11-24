@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from asyncio import sleep
 from poll import *
 
-load_dotenv() # testing only - does nothing when actually deployed
+load_dotenv() # local testing only - does nothing when actually deployed
 
 TOKEN = os.environ.get("DISCORD_TOKEN")
 
@@ -169,8 +169,9 @@ async def manage_polls(commands, channel, user):
         else:
             return await delete_poll(commands[1])
 
-    if polls[commands[1]].disabled:
-        return "Cannot modify a called poll."
+    if len(commands) > 1:
+        if polls[commands[1]].disabled:
+            return "Cannot modify a called poll."
 
     if commands[0] == "add":
         if len(commands) < 4:

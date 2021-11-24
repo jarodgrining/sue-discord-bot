@@ -16,6 +16,8 @@ class Poll:
             self.votes = -1
 
     async def init_binary(self):
+        # in case they don't show up in certain text editors - the below
+        # strings are the thumbs up and thumbs down emojis
         self.options["👍"] = "Yes"
         self.options["👎"] = "No"
         await self.message.add_reaction("👍")
