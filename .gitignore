@@ -130,3 +130,6 @@ dmypy.json
 
 # used for testing
 test.py
+testshelve
+polls
+shelvedoptions/

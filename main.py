@@ -1,19 +1,20 @@
 import os
 import discord
 import random
+import shelve
 from dotenv import load_dotenv
 from asyncio import sleep
 from poll import *
 
 load_dotenv() # local testing only - does nothing when actually deployed
 
-TOKEN = os.environ.get("DISCORD_TOKEN")
+DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 
 client = discord.Client()
 
 messages = {}
-polls = {}
 dad_jokes = []
+polls = shelve.open("polls", writeback=True)
 
 @client.event
 async def on_ready():
@@ -52,7 +53,7 @@ async def on_reaction_add(reaction, user):
         return
 
     for poll_name in polls:
-        if polls[poll_name].message == reaction.message:
+        if polls[poll_name].message_id == reaction.message.id:
             if reaction.emoji in polls[poll_name].options:
                 await handle_poll_vote(reaction, user, poll_name)
             break
@@ -78,8 +79,8 @@ async def parse_command(command, channel, user):
         return "Polls successfully purged."
     elif action == "help":
         return messages["help"]
-    else:
-        return messages["bad command"]
+
+    return messages["bad command"]
 
 async def roll_dice(dice):
     rolls = []
@@ -155,7 +156,7 @@ async def manage_polls(commands, channel, user):
     if len(commands) > 1:
         if commands[1] not in polls:
             return messages["poll name missing"]
-        elif user != polls[commands[1]].owner and not channel.permissions_for(user).manage_messages:
+        elif user.id != polls[commands[1]].owner_id and not channel.permissions_for(user).manage_messages:
             return messages["poll permission"]
 
     if commands[0] == "call":
@@ -216,13 +217,14 @@ async def make_poll(commands, origin_channel, user):
         if (channel.name == channel_name):
             if not channel.permissions_for(user).send_messages:
                 return "You don't have the permission to send messages in the target channel."
-            temp_message = await channel.send("Poll:\n" + question)
-            message_id = temp_message.id
-            await sleep(1) # trust me this is important
-            cached_message = discord.utils.get(client.cached_messages, id=message_id)
-            polls[name] = Poll(cached_message, question, type, votes, user)
+
+            if name in polls:
+                return "A poll by that name already exists. Please use a different name. Use '$ue poll list' to see all names in use."
+
+            message = await channel.send(question)
+            polls[name] = Poll(name, question, type, votes, user.id, channel.id, message.id)
             if type == "binary":
-                await polls[name].init_binary()
+                await polls[name].init_binary(client)
             return "Poll successfully created."
 
     return "Channel name not found."
@@ -235,7 +237,7 @@ async def add_poll_option(commands):
 
     reaction_code = commands.pop(0)
     option = " ".join(commands)
-    return await polls[name].add_option(reaction_code, option)
+    return await polls[name].add_option(client, reaction_code, option)
 
 async def remove_poll_option(commands):
     name = commands.pop(0)
@@ -244,21 +246,21 @@ async def remove_poll_option(commands):
         return "Cannot remove options from a binary poll."
 
     reaction_code = commands.pop(0)
-    return await polls[name].remove_option(reaction_code, client.user)
+    return await polls[name].remove_option(client, reaction_code)
 
 async def change_poll_question(commands):
     name = commands.pop(0)
     new_question = " ".join(commands)
-    return await polls[name].set_question(new_question)
+    return await polls[name].set_question(client, new_question)
 
 async def change_poll_option(commands):
     name = commands.pop(0)
     reaction_code = commands.pop(0)
     new_option = " ".join(commands)
-    return await polls[name].change_option(reaction_code, new_option)
+    return await polls[name].change_option(client, reaction_code, new_option)
 
 async def call_poll(name):
-    return await polls[name].call()
+    return await polls[name].call(client)
 
 async def delete_poll(name):
     del polls[name]
@@ -270,7 +272,7 @@ async def list_polls():
 
     output = ""
     for poll in polls:
-        output += "\n" + poll + ": " + polls[poll].question + " @ " + polls[poll].message.channel.name + " is "
+        output += "\n" + poll + ": " + polls[poll].question + " @ " + client.get_channel(polls[poll].channel_id).name + " is "
         if polls[poll].disabled:
             output += "called"
         else:
@@ -288,6 +290,15 @@ async def handle_poll_vote(reaction, user, name):
 
         if len(votes_made) > polls[name].votes:
             for react in votes_made:
-                await polls[name].message.remove_reaction(reaction, user)
+                await reaction.message.remove_reaction(reaction, user)
 
-client.run(TOKEN)
+client.run(DISCORD_TOKEN)
+
+# note: the following code is run after client.run returns, which is when the bot
+# is shutting down for whatever reason. heroku sends a SIGTERM signal when it
+# restarts the dyno every day, and client.run returns on this signal.
+
+for poll in polls:
+    polls[poll].options.close()
+
+polls.close()
