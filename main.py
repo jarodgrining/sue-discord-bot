@@ -2,8 +2,12 @@ import os
 import discord
 import random
 import shelve
+import json
 from dotenv import load_dotenv
 from asyncio import sleep
+from google.cloud import storage
+from google.cloud.exceptions import NotFound
+from google.oauth2 import service_account
 from poll import *
 
 load_dotenv() # local testing only - does nothing when actually deployed
@@ -14,14 +18,48 @@ client = discord.Client()
 
 messages = {}
 dad_jokes = []
+
+cloud_json_data = json.loads(os.environ.get("GOOGLE_CRED_JSON_STRING"))
+cloud_creds = service_account.Credentials.from_service_account_info(cloud_json_data)
+cloud_client = storage.Client(credentials=cloud_creds)
+bucket = cloud_client.bucket("sue-discord-bot-main")
+
+# verify credentials
+buckets = list(cloud_client.list_buckets())
+print(buckets)
+print(bucket)
+
+def download_file(filepath):
+    blob = bucket.blob(filepath)
+    try:
+        blob.download_to_filename(filepath)
+        print("Downloaded {}".format(filepath))
+    except NotFound:
+        # if this occurs, the data lost is effectively reset by shelve.open
+        print("Failed to find {}".format(filepath))
+
+def upload_file(filepath):
+    blob = bucket.blob(filepath)
+    blob.upload_from_filename(filepath)
+    print("Uploaded {}".format(filepath))
+
+def delete_blob(filepath):
+    blob = bucket.blob(filepath)
+    blob.delete()
+    print("Deleted {}".format(filepath))
+
+download_file("polls")
 polls = shelve.open("polls", writeback=True)
+for poll in polls:
+    print("Attempting to download " + poll)
+    download_file("shelvedoptions/" + poll)
 
 @client.event
 async def on_ready():
     print("Logged in as {0.user}".format(client))
     await load_messages()
     await load_dad_jokes()
-    print("Loaded files")
+    print("Loaded local files into variables")
 
 async def load_messages():
     f = open("messages.txt", "r")
@@ -199,6 +237,10 @@ async def manage_polls(commands, channel, user):
 
 async def make_poll(commands, origin_channel, user):
     name = commands.pop(0)
+
+    if '\n' in name or '\r' in name:
+        return "For storage reasons, poll names can't have carriage return or line feed characters. Please choose a different name."
+
     type = commands.pop(0)
     votes = 0
 
@@ -263,6 +305,7 @@ async def call_poll(name):
     return await polls[name].call(client)
 
 async def delete_poll(name):
+    delete_blob("shelvedoptions/" + name)
     del polls[name]
     return "Poll successfully deleted."
 
@@ -300,5 +343,7 @@ client.run(DISCORD_TOKEN)
 
 for poll in polls:
     polls[poll].options.close()
+    upload_file("shelvedoptions/" + poll)
 
 polls.close()
+upload_file("polls")
