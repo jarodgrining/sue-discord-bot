@@ -33,20 +33,20 @@ def download_file(filepath):
     blob = bucket.blob(filepath)
     try:
         blob.download_to_filename(filepath)
-        print("Downloaded {}".format(filepath))
+        print(f"Downloaded {filepath}")
     except NotFound:
         # if this occurs, the data lost is effectively reset by shelve.open
-        print("Failed to find {}".format(filepath))
+        print(f"Failed to find {filepath}")
 
 def upload_file(filepath):
     blob = bucket.blob(filepath)
     blob.upload_from_filename(filepath)
-    print("Uploaded {}".format(filepath))
+    print(f"Uploaded {filepath}")
 
 def delete_blob(filepath):
     blob = bucket.blob(filepath)
     blob.delete()
-    print("Deleted {}".format(filepath))
+    print(f"Deleted {filepath}")
 
 download_file("polls")
 polls = shelve.open("polls", writeback=True)
@@ -56,7 +56,7 @@ for poll in polls:
 
 @client.event
 async def on_ready():
-    print("Logged in as {0.user}".format(client))
+    print(f"Logged in as {client.user}")
     await load_messages()
     await load_dad_jokes()
     print("Loaded local files into variables")
@@ -69,10 +69,13 @@ async def load_messages():
     f.close()
 
 async def load_dad_jokes():
-    f = open("dadjokes.txt", "r")
-    for joke in f:
-        dad_jokes.append(joke)
-    f.close()
+    try:
+        with open("dadjokes.txt", "r") as f:
+            for joke in f:
+                dad_jokes.append(joke)
+    except FileNotFoundError:
+        print("dadjokes.txt is missing")
+        dad_jokes.append(messages["emergency dad joke"])
 
 @client.event
 async def on_message(message):
@@ -82,8 +85,8 @@ async def on_message(message):
     if not message.content.startswith("$ue"):
         return
 
-    output = await parse_command(message.content.split(" "), message.channel, message.author)
-    await message.channel.send(output)
+    response = await parse_command(message.content.split(" "), message.channel, message.author)
+    await message.channel.send(response)
 
 @client.event
 async def on_reaction_add(reaction, user):
@@ -113,8 +116,7 @@ async def parse_command(command, channel, user):
             return messages["usage poll"]
         return await manage_polls(command[2:], channel, user)
     elif action == "gblogbddyptstsasgts" and channel.permissions_for(user).manage_messages:
-        polls = {}
-        return "Polls successfully purged."
+        return purge_polls()
     elif action == "help":
         return messages["help"]
 
@@ -138,24 +140,24 @@ async def roll_dice(dice):
             ind = die.find("D")
 
         if ind == -1 or len(die) < 2 or ind == len(die)-1:
-            return "Invalid dice entered."
+            return messages["dice invalid"]
 
         type_string = die[ind+1:]
         if not type_string.isdigit():
-            return "Invalid dice entered."
+            return messages["dice invalid"]
 
         quantity = 1
         if ind > 0:
             quantity_string = die[:ind]
             if not quantity_string.isdigit():
-                return "Invalid quantity of dice entered."
+                return messages["dice invalid quantity"]
             quantity = int(quantity_string)
 
         type = int(type_string)
         if quantity < 1:
-            return "Invalid quantity of dice entered."
+            return messages["dice invalid quantity"]
         elif type < 1:
-            return "Invalid type of dice entered."
+            return messages["dice invalid type"]
 
         for _ in range(quantity):
             roll = random.randint(1, type)
@@ -210,7 +212,7 @@ async def manage_polls(commands, channel, user):
 
     if len(commands) > 1:
         if polls[commands[1]].disabled:
-            return "Cannot modify a called poll."
+            return messages["poll modify disabled"]
 
     if commands[0] == "add":
         if len(commands) < 4:
@@ -235,11 +237,21 @@ async def manage_polls(commands, channel, user):
 
     return messages["usage poll"]
 
+def purge_polls():
+    polls.close()
+    try:
+        os.remove("polls")
+        polls = shelve.open("polls", writeback=True)
+        return "Polls successfully purged."
+    except FileNotFoundError:
+        polls = shelve.open("polls", writeback=True)
+        return messages["poll purge failure"]
+
 async def make_poll(commands, origin_channel, user):
     name = commands.pop(0)
 
     if '\n' in name or '\r' in name:
-        return "For storage reasons, poll names can't have carriage return or line feed characters. Please choose a different name."
+        return messages["poll name invalid char"]
 
     type = commands.pop(0)
     votes = 0
@@ -248,9 +260,9 @@ async def make_poll(commands, origin_channel, user):
         try:
             votes = int(commands.pop(0))
         except:
-            return "Bad number of votes given."
+            return messages["poll invalid votes"]
     elif type != "binary" and type != "open":
-        return "Type must be open, exclusive, or binary."
+        return messages["poll invalid type"]
 
     channel_name = commands.pop(0)
     question = " ".join(commands)
@@ -258,10 +270,10 @@ async def make_poll(commands, origin_channel, user):
     for channel in origin_channel.guild.text_channels:
         if (channel.name == channel_name):
             if not channel.permissions_for(user).send_messages:
-                return "You don't have the permission to send messages in the target channel."
+                return messages["permission sending"]
 
             if name in polls:
-                return "A poll by that name already exists. Please use a different name. Use '$ue poll list' to see all names in use."
+                return messages["poll name redundant"]
 
             message = await channel.send(question)
             polls[name] = Poll(name, question, type, votes, user.id, channel.id, message.id)
@@ -269,13 +281,13 @@ async def make_poll(commands, origin_channel, user):
                 await polls[name].init_binary(client)
             return "Poll successfully created."
 
-    return "Channel name not found."
+    return messages["poll invalid channel"]
 
 async def add_poll_option(commands):
     name = commands.pop(0)
 
     if polls[name].type == "binary":
-        return "Cannot add options to a binary poll."
+        return messages["poll modify binary"]
 
     reaction_code = commands.pop(0)
     option = " ".join(commands)
@@ -285,7 +297,7 @@ async def remove_poll_option(commands):
     name = commands.pop(0)
 
     if polls[name].type == "binary":
-        return "Cannot remove options from a binary poll."
+        return messages["poll modify binary"]
 
     reaction_code = commands.pop(0)
     return await polls[name].remove_option(client, reaction_code)

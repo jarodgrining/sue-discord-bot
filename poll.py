@@ -130,7 +130,7 @@ class Poll:
             if len(winners) == 1:
                 output += "Winner: " + self.options[reacts[0].emoji]
             else:
-                output += "There was a {0}-way tie. Winners:".format(len(winners))
+                output += f"There was a {len(winners)}-way tie. Winners:"
                 for winner in winners:
                     output +=  " " + self.options[winner.emoji] + ","
                 output = output[:-1]

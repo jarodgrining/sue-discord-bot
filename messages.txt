@@ -1,14 +1,48 @@
+emergency dad joke
+What did the bot who couldn't find her dad jokes say?
+"Where are my dad jokes?"
+<break>
 empty command
 Use '$ue help' to see list of commands.
 <break>
 bad command
 Unrecognised command. Use '$ue help' to see list of commands.
 <break>
+dice invalid
+Invalid dice entered. Follow the format 'dx ydz 2d6'.
+<break>
+dice invalid quantity
+Invalid quantity of dice entered. Please make sure you enter only integers greater than zero.
+<break>
+dice invalid type
+Invalid type of dice entered. Only dice with a natural number of sides may be rolled.
+<break>
 poll name missing
 Poll name not recognised.
 <break>
+poll name redundant
+A poll by that name already exists. Please use a different name. Use '$ue poll list' to see all names in use.
+<break>
+poll name invalid char
+For storage reasons, poll names can't have carriage return or line feed characters. Please choose a different name.
+<break>
 poll permission
 You must have created that poll or have the "manage messages" permission to do that.
+<break>
+poll modify disabled
+Cannot modify a called poll.
+<break>
+poll modify binary
+Cannot modify options of a binary poll.
+<break>
+poll invalid votes
+Bad number of votes given.
+<break>
+poll invalid type
+Type must be open, exclusive, or binary.
+<break>
+poll invalid channel
+Channel name not found.
 <break>
 usage roll
 Usage: '$ue roll [space separated dice]'
@@ -58,6 +92,12 @@ Note that this frees up the poll name for use again, but is permanent and irreve
 poll purge
 Purging all polls is a permanent and irreversible action. Upon doing so, any polls created prior to this point will become unmodifiable and unreadable by me. It should only be used outside debugging in important administrative matters.
 If you would like to proceed, please type '$ue gblogbddyptstsasgts'.
+<break>
+poll purge failure
+Polls file missing (shelve reopened; no further action required).
+<break>
+permission sending
+You don't have the permission to send messages in the target channel.
 <break>
 help
 To use me, start your message with '$ue'. You can type a command by itself to see its exact syntax.
