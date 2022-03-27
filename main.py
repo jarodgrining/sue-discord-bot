@@ -119,6 +119,11 @@ async def parse_command(command, channel, user):
         return purge_polls()
     elif action == "help":
         return messages["help"]
+    elif action == "make" or action == "list" or action == "call" or action == "delete"\
+     or action == "add" or action == "remove" or action == "changeq" or action == "changeop":
+        return await manage_polls(command[1:], channel, user)
+    elif action == "stats":
+        return await roll_stats()
 
     return messages["bad command"]
 
@@ -132,6 +137,8 @@ async def roll_dice(dice):
             return messages["usage roll sum"]
         dice = dice[1:]
         hide_ind = True
+    elif dice[0] == "stats":
+        return await roll_stats()
 
     for die in dice:
         ind = die.find("d")
@@ -178,6 +185,18 @@ async def roll_dice(dice):
         output = "Too many rolls to display individual results. Total: " + str(total)
 
     return output
+
+async def roll_stats():
+    # according to dnd 5e
+    result = "Your ability scores are:"
+    for _ in range(6):
+        rolls = []
+        for _ in range(4):
+            rolls.append(random.randint(1, 6))
+        rolls.sort(reverse=True)
+        rolls.pop()
+        result += " " + str(sum(rolls))
+    return result
 
 async def tell_dad_joke():
     return random.choice(dad_jokes)

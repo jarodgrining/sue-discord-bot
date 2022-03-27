@@ -48,6 +48,7 @@ usage roll
 Usage: '$ue roll [space separated dice]'
 Example: $ue roll d20 2d6 d4 9d73
 For high quantity rolls, use '$ue roll sum' to display sum of individual rolls for each entry.
+You can use '$ue roll stats' to roll up ability scores for a DnD 5e character.
 <break>
 usage roll sum
 Usage: '$ue roll sum [space separated dice]'
